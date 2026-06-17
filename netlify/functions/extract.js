@@ -35,6 +35,8 @@ exports.handler = async (event) => {
       "You are a strength coach building a Push/Pull/Legs plan. Below is a PERSON profile and a CATALOG of allowed exercises " +
       "(each has id, name, day, equipment, muscles). Choose the best exercises for THIS person's goal and equipment. " +
       "Pick about 5-6 per day, balanced across the muscles for that day, ordered most-important first. " +
+      "Consider their goal, and use height/weight where it sensibly applies (e.g. favour big compound lifts for someone gaining/lean-bulking, " +
+      "and include more bodyweight/compound work for fat loss) — but do not exclude exercises just due to body size. " +
       "RULES: only use ids that appear in the catalog; never invent ids or exercises; only pick exercises whose day matches. " +
       "Reply with ONLY JSON, no markdown: {\"push\":[ids],\"pull\":[ids],\"legs\":[ids]}.\n\nPERSON:\n" + profile +
       "\n\nCATALOG:\n" + JSON.stringify(catalog);

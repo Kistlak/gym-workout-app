@@ -254,6 +254,9 @@
   .plan-ex{display:flex;align-items:center;gap:10px;background:var(--card-2);border:1px solid var(--line);border-radius:11px;padding:8px 10px;margin-bottom:7px;cursor:pointer}
   .plan-ex.on{border-color:var(--amber)}
   .plan-ex img{width:42px;height:42px;border-radius:8px;background:#FBFBFB;object-fit:contain;flex:none}
+  .plan-ex .pe-img{flex:none;position:relative;width:48px;height:48px;padding:0;border:none;background:#FBFBFB;border-radius:8px;overflow:hidden;cursor:pointer}
+  .plan-ex .pe-img img{width:100%;height:100%;object-fit:contain;display:block}
+  .plan-ex .pe-zoom{position:absolute;right:1px;bottom:1px;background:rgba(14,18,22,.72);color:#fff;font-size:10px;line-height:1;border-radius:5px;padding:2px 3px}
   .plan-ex .pe-info{flex:1;min-width:0}
   .plan-ex .pe-n{font-weight:600;font-size:14px;line-height:1.2}
   .plan-ex .pe-sub{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.04em;margin-top:2px}
@@ -261,6 +264,18 @@
   .plan-ex .pe-check{flex:none;width:22px;height:22px;border-radius:6px;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:13px;color:transparent}
   .plan-ex.on .pe-check{background:var(--amber);border-color:transparent;color:#0E1216}
   .plan-rec{font-size:12px;color:var(--amber);margin:2px 0 8px}
+  .img-modal-card{max-width:440px}
+  .img-big{position:relative;width:100%;aspect-ratio:1/1;background:#FBFBFB;border-radius:14px;overflow:hidden;cursor:pointer}
+  .img-big img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;opacity:0;transition:opacity .25s}
+  .img-big .bf0{opacity:1}
+  .img-big.alt .bf0{opacity:0}
+  .img-big.alt .bf1{opacity:1}
+  .img-phase{position:absolute;left:10px;bottom:10px;background:rgba(14,18,22,.82);color:#fff;font-family:'Barlow Condensed';font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:13px;padding:4px 11px;border-radius:99px}
+  .img-big.paused .img-phase{background:var(--amber);color:#0E1216}
+  .img-meta{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .img-meta .chip{font-size:12px;color:var(--muted);border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+  .img-meta .chip.primary{color:var(--amber);border-color:var(--amber)}
+  .img-hint{font-size:12px;color:var(--muted);margin-top:10px;text-align:center}
   .eye{background:transparent;border:none;color:var(--amber);font-size:11px;font-weight:600;cursor:pointer;padding:0;margin-left:6px;text-transform:lowercase;letter-spacing:0}
   body.readonly #startBtn,body.readonly #slAdd,body.readonly #bwAdd,body.readonly .delbtn,body.readonly .editbtn,body.readonly .skipbtn,body.readonly .reset,body.readonly .se-save,body.readonly #importBtn,body.readonly .bw-add{display:none!important}
   .savebar.show{opacity:1}
@@ -399,12 +414,13 @@ create policy "anon access" on ppl_kv
       <p class="tiny" style="margin-top:0">Set your goal and gear, and let the AI star the best exercises for you from the library. Keep its picks or add your own — your plan then shows in the Train tab. No plan? Train uses the default Push/Pull/Legs.</p>
       <div class="field"><span class="cap">Goal</span><select id="planGoal"><option value="lean bulk">Lean bulk (gain muscle, stay lean)</option><option value="lose fat">Lose fat / get lean</option><option value="build strength">Build strength</option><option value="general fitness">General fitness</option></select></div>
       <div class="field"><span class="cap">Days per week</span><select id="planDays"><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
-      <div class="field"><span class="cap">Equipment</span><select id="planEquip"><option value="hotel">Hotel gym (dumbbells, machines, no barbell)</option><option value="gym">Full gym (everything)</option></select></div>
+      <div class="field"><span class="cap">Equipment</span><select id="planEquip"><option value="hotel">Hotel gym (dumbbells, bodyweight, pulldown/row)</option><option value="mid">Mid gym (+ barbell &amp; cables)</option><option value="full">Full gym (+ leg-machine room)</option></select></div>
       <button class="btn-primary" id="planBuild">✨ Build my plan with AI</button>
       <div class="status" id="planStatus" style="display:none"></div>
       <div id="planPick"></div>
       <div id="planActions" style="display:none">
         <button class="btn-primary" id="planSave" style="margin-top:12px">Save plan → show in Train</button>
+        <div class="status" id="planActionMsg" style="display:none"></div>
         <button class="reset" id="planClear" style="margin-top:10px">Clear plan (use default PPL)</button>
       </div>
     </div>
@@ -472,6 +488,18 @@ create policy "anon access" on ppl_kv
   </div>
 </div>
 
+<div class="modal" id="imgModal" role="dialog" aria-modal="true">
+  <div class="modal-card img-modal-card">
+    <div class="modal-head"><h3 id="imName">Exercise</h3><button class="modal-close" id="imClose" aria-label="Close">✕</button></div>
+    <div class="img-big" id="imBig" role="button" tabindex="0" aria-label="Tap to pause the demo">
+      <img class="bf0" id="imF0" alt=""><img class="bf1" id="imF1" alt="">
+      <span class="img-phase"><span id="imPhase">Start</span></span>
+    </div>
+    <div class="img-meta" id="imMeta"></div>
+    <div class="img-hint">Tap the image to pause · two real frames show the movement</div>
+  </div>
+</div>
+
 <div class="nav" id="bottomNav">
   <button data-view="train" class="on"><svg viewBox="0 0 24 24" fill="none"><path d="M6.5 6.5v11M17.5 6.5v11M3 9v6M21 9v6M6.5 12h11" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>Train</button>
   <button data-view="history"><svg viewBox="0 0 24 24" fill="none"><path d="M12 7v5l3 2" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2"/></svg>History</button>
@@ -510,41 +538,41 @@ const ORDER=["pull","push","legs"],COLORS={pull:"var(--pull)",push:"var(--push)"
 
 /* ---------- exercise library + custom plan ---------- */
 const LIB={
-"Barbell_Bench_Press_-_Medium_Grip":{n:"Barbell Bench Press",img:"Barbell_Bench_Press_-_Medium_Grip",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2},
-"Dumbbell_Flyes":{n:"Dumbbell Chest Fly",img:"Dumbbell_Flyes",day:"push",m:["Chest"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Dumbbell_Shoulder_Press":{n:"Dumbbell Shoulder Press",img:"Dumbbell_Shoulder_Press",day:"push",m:["Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Dumbbell_Bench_Press":{n:"Flat Dumbbell Bench Press",img:"Dumbbell_Bench_Press",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Front_Dumbbell_Raise":{n:"Front Raise",img:"Front_Dumbbell_Raise",day:"push",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Incline_Dumbbell_Press":{n:"Incline Dumbbell Press",img:"Incline_Dumbbell_Press",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Side_Lateral_Raise":{n:"Lateral Raise",img:"Side_Lateral_Raise",day:"push",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Standing_Military_Press":{n:"Overhead Barbell Press",img:"Standing_Military_Press",day:"push",m:["Shoulders", "Triceps"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2},
-"Standing_Dumbbell_Triceps_Extension":{n:"Overhead Triceps Extension",img:"Standing_Dumbbell_Triceps_Extension",day:"push",m:["Triceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Pushups":{n:"Push-Up",img:"Pushups",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Bodyweight",sets:3,reps:"8–12",rest:90,frames:2},
-"Dips_-_Triceps_Version":{n:"Triceps Dips",img:"Dips_-_Triceps_Version",day:"push",m:["Triceps", "Chest", "Shoulders"],gear:"Bodyweight",sets:4,reps:"6–10",rest:150,frames:2},
-"Triceps_Pushdown":{n:"Triceps Pushdown",img:"Triceps_Pushdown",day:"push",m:["Triceps"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2},
-"Barbell_Curl":{n:"Barbell Curl",img:"Barbell_Curl",day:"pull",m:["Biceps", "Forearms"],gear:"Barbell",sets:3,reps:"10–15",rest:70,frames:2},
-"Bent_Over_Barbell_Row":{n:"Barbell Row",img:"Bent_Over_Barbell_Row",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2},
-"Cable_Hammer_Curls_-_Rope_Attachment":{n:"Cable Hammer Curl",img:"Cable_Hammer_Curls_-_Rope_Attachment",day:"pull",m:["Biceps"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2},
-"Face_Pull":{n:"Face Pull",img:"Face_Pull",day:"pull",m:["Shoulders", "Mid back"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2},
-"Hammer_Curls":{n:"Hammer Curl",img:"Hammer_Curls",day:"pull",m:["Biceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Incline_Dumbbell_Curl":{n:"Incline Dumbbell Curl",img:"Incline_Dumbbell_Curl",day:"pull",m:["Biceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Wide-Grip_Lat_Pulldown":{n:"Lat Pulldown",img:"Wide-Grip_Lat_Pulldown",day:"pull",m:["Lats", "Biceps", "Mid back", "Shoulders"],gear:"Cable",sets:4,reps:"6–10",rest:150,frames:2},
-"One-Arm_Dumbbell_Row":{n:"One-Arm Dumbbell Row",img:"One-Arm_Dumbbell_Row",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Pullups":{n:"Pull-Up",img:"Pullups",day:"pull",m:["Lats", "Biceps", "Mid back"],gear:"Bodyweight",sets:4,reps:"6–10",rest:150,frames:2},
-"Reverse_Flyes":{n:"Rear Delt Fly",img:"Reverse_Flyes",day:"pull",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2},
-"Seated_Cable_Rows":{n:"Seated Cable Row",img:"Seated_Cable_Rows",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Cable",sets:4,reps:"6–10",rest:150,frames:2},
-"Barbell_Squat":{n:"Barbell Back Squat",img:"Barbell_Squat",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings", "Lower back"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2},
-"Barbell_Hip_Thrust":{n:"Barbell Hip Thrust",img:"Barbell_Hip_Thrust",day:"legs",m:["Glutes", "Calves", "Hamstrings"],gear:"Barbell",sets:3,reps:"10–12",rest:90,frames:2},
-"Split_Squat_with_Dumbbells":{n:"Bulgarian Split Squat",img:"Split_Squat_with_Dumbbells",day:"legs",m:["Quads", "Glutes", "Hamstrings"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Dumbbell_Lunges":{n:"Dumbbell Lunge",img:"Dumbbell_Lunges",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings"],gear:"Dumbbells",sets:3,reps:"8–10",rest:120,frames:2},
-"Stiff-Legged_Dumbbell_Deadlift":{n:"Dumbbell Romanian Deadlift",img:"Stiff-Legged_Dumbbell_Deadlift",day:"legs",m:["Hamstrings", "Glutes", "Lower back"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2},
-"Butt_Lift_Bridge":{n:"Glute Bridge",img:"Butt_Lift_Bridge",day:"legs",m:["Glutes", "Hamstrings"],gear:"Bodyweight",sets:3,reps:"10–12",rest:90,frames:2},
-"Goblet_Squat":{n:"Goblet Squat",img:"Goblet_Squat",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings", "Shoulders"],gear:"Kettlebell",sets:4,reps:"6–10",rest:150,frames:2},
-"Leg_Extensions":{n:"Leg Extension",img:"Leg_Extensions",day:"legs",m:["Quads"],gear:"Machine",sets:3,reps:"10–15",rest:70,frames:2},
-"Leg_Press":{n:"Leg Press",img:"Leg_Press",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings"],gear:"Machine",sets:4,reps:"6–10",rest:150,frames:2},
-"Lying_Leg_Curls":{n:"Lying Leg Curl",img:"Lying_Leg_Curls",day:"legs",m:["Hamstrings"],gear:"Machine",sets:3,reps:"10–15",rest:70,frames:2},
-"Seated_Calf_Raise":{n:"Seated Calf Raise",img:"Seated_Calf_Raise",day:"legs",m:["Calves"],gear:"Machine",sets:4,reps:"12–15",rest:60,frames:2},
-"Standing_Calf_Raises":{n:"Standing Calf Raise",img:"Standing_Calf_Raises",day:"legs",m:["Calves"],gear:"Machine",sets:4,reps:"12–15",rest:60,frames:2}
+"Barbell_Bench_Press_-_Medium_Grip":{n:"Barbell Bench Press",img:"Barbell_Bench_Press_-_Medium_Grip",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2,tier:2},
+"Dumbbell_Flyes":{n:"Dumbbell Chest Fly",img:"Dumbbell_Flyes",day:"push",m:["Chest"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Dumbbell_Shoulder_Press":{n:"Dumbbell Shoulder Press",img:"Dumbbell_Shoulder_Press",day:"push",m:["Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Dumbbell_Bench_Press":{n:"Flat Dumbbell Bench Press",img:"Dumbbell_Bench_Press",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Front_Dumbbell_Raise":{n:"Front Raise",img:"Front_Dumbbell_Raise",day:"push",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Incline_Dumbbell_Press":{n:"Incline Dumbbell Press",img:"Incline_Dumbbell_Press",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Side_Lateral_Raise":{n:"Lateral Raise",img:"Side_Lateral_Raise",day:"push",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Standing_Military_Press":{n:"Overhead Barbell Press",img:"Standing_Military_Press",day:"push",m:["Shoulders", "Triceps"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2,tier:2},
+"Standing_Dumbbell_Triceps_Extension":{n:"Overhead Triceps Extension",img:"Standing_Dumbbell_Triceps_Extension",day:"push",m:["Triceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Pushups":{n:"Push-Up",img:"Pushups",day:"push",m:["Chest", "Shoulders", "Triceps"],gear:"Bodyweight",sets:3,reps:"8–12",rest:90,frames:2,tier:1},
+"Dips_-_Triceps_Version":{n:"Triceps Dips",img:"Dips_-_Triceps_Version",day:"push",m:["Triceps", "Chest", "Shoulders"],gear:"Bodyweight",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Triceps_Pushdown":{n:"Triceps Pushdown",img:"Triceps_Pushdown",day:"push",m:["Triceps"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2,tier:2},
+"Barbell_Curl":{n:"Barbell Curl",img:"Barbell_Curl",day:"pull",m:["Biceps", "Forearms"],gear:"Barbell",sets:3,reps:"10–15",rest:70,frames:2,tier:2},
+"Bent_Over_Barbell_Row":{n:"Barbell Row",img:"Bent_Over_Barbell_Row",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2,tier:2},
+"Cable_Hammer_Curls_-_Rope_Attachment":{n:"Cable Hammer Curl",img:"Cable_Hammer_Curls_-_Rope_Attachment",day:"pull",m:["Biceps"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2,tier:2},
+"Face_Pull":{n:"Face Pull",img:"Face_Pull",day:"pull",m:["Shoulders", "Mid back"],gear:"Cable",sets:3,reps:"10–15",rest:70,frames:2,tier:2},
+"Hammer_Curls":{n:"Hammer Curl",img:"Hammer_Curls",day:"pull",m:["Biceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Incline_Dumbbell_Curl":{n:"Incline Dumbbell Curl",img:"Incline_Dumbbell_Curl",day:"pull",m:["Biceps"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Wide-Grip_Lat_Pulldown":{n:"Lat Pulldown",img:"Wide-Grip_Lat_Pulldown",day:"pull",m:["Lats", "Biceps", "Mid back", "Shoulders"],gear:"Cable",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"One-Arm_Dumbbell_Row":{n:"One-Arm Dumbbell Row",img:"One-Arm_Dumbbell_Row",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Pullups":{n:"Pull-Up",img:"Pullups",day:"pull",m:["Lats", "Biceps", "Mid back"],gear:"Bodyweight",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Reverse_Flyes":{n:"Rear Delt Fly",img:"Reverse_Flyes",day:"pull",m:["Shoulders"],gear:"Dumbbells",sets:3,reps:"10–15",rest:70,frames:2,tier:1},
+"Seated_Cable_Rows":{n:"Seated Cable Row",img:"Seated_Cable_Rows",day:"pull",m:["Mid back", "Biceps", "Lats", "Shoulders"],gear:"Cable",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Barbell_Squat":{n:"Barbell Back Squat",img:"Barbell_Squat",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings", "Lower back"],gear:"Barbell",sets:4,reps:"6–10",rest:150,frames:2,tier:2},
+"Barbell_Hip_Thrust":{n:"Barbell Hip Thrust",img:"Barbell_Hip_Thrust",day:"legs",m:["Glutes", "Calves", "Hamstrings"],gear:"Barbell",sets:3,reps:"10–12",rest:90,frames:2,tier:2},
+"Split_Squat_with_Dumbbells":{n:"Bulgarian Split Squat",img:"Split_Squat_with_Dumbbells",day:"legs",m:["Quads", "Glutes", "Hamstrings"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Dumbbell_Lunges":{n:"Dumbbell Lunge",img:"Dumbbell_Lunges",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings"],gear:"Dumbbells",sets:3,reps:"8–10",rest:120,frames:2,tier:1},
+"Stiff-Legged_Dumbbell_Deadlift":{n:"Dumbbell Romanian Deadlift",img:"Stiff-Legged_Dumbbell_Deadlift",day:"legs",m:["Hamstrings", "Glutes", "Lower back"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Butt_Lift_Bridge":{n:"Glute Bridge",img:"Butt_Lift_Bridge",day:"legs",m:["Glutes", "Hamstrings"],gear:"Bodyweight",sets:3,reps:"10–12",rest:90,frames:2,tier:1},
+"Goblet_Squat":{n:"Goblet Squat",img:"Goblet_Squat",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings", "Shoulders"],gear:"Dumbbells",sets:4,reps:"6–10",rest:150,frames:2,tier:1},
+"Leg_Extensions":{n:"Leg Extension",img:"Leg_Extensions",day:"legs",m:["Quads"],gear:"Machine",sets:3,reps:"10–15",rest:70,frames:2,tier:3},
+"Leg_Press":{n:"Leg Press",img:"Leg_Press",day:"legs",m:["Quads", "Calves", "Glutes", "Hamstrings"],gear:"Machine",sets:4,reps:"6–10",rest:150,frames:2,tier:3},
+"Lying_Leg_Curls":{n:"Lying Leg Curl",img:"Lying_Leg_Curls",day:"legs",m:["Hamstrings"],gear:"Machine",sets:3,reps:"10–15",rest:70,frames:2,tier:3},
+"Seated_Calf_Raise":{n:"Seated Calf Raise",img:"Seated_Calf_Raise",day:"legs",m:["Calves"],gear:"Machine",sets:4,reps:"12–15",rest:60,frames:2,tier:3},
+"Standing_Calf_Raises":{n:"Standing Calf Raise",img:"Standing_Calf_Raises",day:"legs",m:["Calves"],gear:"Machine",sets:4,reps:"12–15",rest:60,frames:2,tier:1}
 };
 const LIB_DAYS={"push": ["Barbell_Bench_Press_-_Medium_Grip", "Dumbbell_Flyes", "Dumbbell_Shoulder_Press", "Dumbbell_Bench_Press", "Front_Dumbbell_Raise", "Incline_Dumbbell_Press", "Side_Lateral_Raise", "Standing_Military_Press", "Standing_Dumbbell_Triceps_Extension", "Pushups", "Dips_-_Triceps_Version", "Triceps_Pushdown"], "pull": ["Barbell_Curl", "Bent_Over_Barbell_Row", "Cable_Hammer_Curls_-_Rope_Attachment", "Face_Pull", "Hammer_Curls", "Incline_Dumbbell_Curl", "Wide-Grip_Lat_Pulldown", "One-Arm_Dumbbell_Row", "Pullups", "Reverse_Flyes", "Seated_Cable_Rows"], "legs": ["Barbell_Squat", "Barbell_Hip_Thrust", "Split_Squat_with_Dumbbells", "Dumbbell_Lunges", "Stiff-Legged_Dumbbell_Deadlift", "Butt_Lift_Bridge", "Goblet_Squat", "Leg_Extensions", "Leg_Press", "Lying_Leg_Curls", "Seated_Calf_Raise", "Standing_Calf_Raises"]};
 
@@ -657,7 +685,7 @@ function render(day,keepStarted){
       const ll=lastlog[key],lastHint=ll&&ll.ws&&ll.ws.some(w=>w!=="")?`<div class="lasthint">last: ${ll.ws.filter(w=>w!=="").join(', ')} ${ll.unit}</div>`:'';
       return `
       <article class="card${o.skipped?' skipped':''}" data-card="${key}">
-        <div class="demo" role="button" tabindex="0" aria-label="Form demo for ${e.n}. Tap to pause.">
+        <div class="demo" role="button" tabindex="0" data-demo="${key}" aria-label="Form demo for ${e.n}. Tap to enlarge.">
           <img class="f0" src="${IMG}${e.img}/0.jpg" alt="${e.n} start" loading="lazy">
           <img class="f1" src="${IMG}${e.img}/1.jpg" alt="${e.n} finish" loading="lazy">
           <span class="badge">Real form demo</span><span class="pauseflag">Paused — tap to play</span>
@@ -706,7 +734,7 @@ function openDay(day){if(active&&active.startedAt&&active.day!==day){if(!confirm
 
 main.addEventListener('click',e=>{
   const demo=e.target.closest('.demo');
-  if(demo){if(demo.classList.contains('paused'))demo.classList.remove('paused');else{demo.classList.add('paused');toggleFrame(demo);}return;}
+  if(demo){openImg(demo.dataset.demo);return;}
   const rest=e.target.closest('.stat.rest');
   if(rest){startTimer(parseInt(rest.dataset.rest,10),rest.dataset.name);return;}
   const bb=e.target.closest('.bodybtn');
@@ -849,22 +877,26 @@ function loadPlanFields(){
   if(profile.planEquip)document.getElementById('planEquip').value=profile.planEquip;
   if(plan&&!planDraft){planDraft={push:[...(plan.push||[])],pull:[...(plan.pull||[])],legs:[...(plan.legs||[])]};renderPlanPicker();document.getElementById('planActions').style.display='block';}
 }
-function equipAllowed(gear,equip){if(equip==='gym')return true;return gear!=='Barbell';}
+function equipTier(equip){return equip==='full'?3:(equip==='mid'?2:1);}
+function equipAllowed(gear,equip){return true;} // legacy, unused
+function exAllowed(id,equip){return LIB[id].tier<=equipTier(equip);}
 function renderPlanPicker(){
   const box=document.getElementById('planPick');if(!planDraft){box.innerHTML='';return;}
-  const equip=document.getElementById('planEquip').value;let html='';
+  const equip=document.getElementById('planEquip').value;let html='<p class="tiny" style="margin:0 0 6px">Not sure what a move is? <b>Tap its photo</b> to watch it large. Tap the <b>row</b> to add or remove it.</p>';
   [['push','Push'],['pull','Pull'],['legs','Legs']].forEach(([dk,dn])=>{
-    const ids=LIB_DAYS[dk].filter(id=>equipAllowed(LIB[id].gear,equip));
+    const ids=LIB_DAYS[dk].filter(id=>exAllowed(id,equip));
     const recCount=(planStars[dk]||[]).length;
     html+=`<div class="plan-day"><h5 style="color:${COLORS[dk]}">${dn}</h5>`;
-    if(recCount)html+=`<div class="plan-rec">★ ${recCount} recommended${equip==='hotel'?' · barbell hidden':''}</div>`;
+    if(recCount)html+=`<div class="plan-rec">★ ${recCount} recommended${equip==='hotel'?' · hotel level':(equip==='mid'?' · mid-gym level':'')}</div>`;
     ids.forEach(id=>{const e=LIB[id],on=planDraft[dk].indexOf(id)>-1,star=(planStars[dk]||[]).indexOf(id)>-1;
-      html+=`<div class="plan-ex ${on?'on':''}" data-pick="${dk}:${id}"><img src="${IMG}${e.img}/0.jpg" loading="lazy" alt=""><div class="pe-info"><div class="pe-n">${star?'★ ':''}${escapeHtml(e.n)}</div><div class="pe-sub">${escapeHtml(e.gear)} · ${escapeHtml(e.m.slice(0,2).join(', '))}</div></div><div class="pe-check">✓</div></div>`;});
+      html+=`<div class="plan-ex ${on?'on':''}" data-pick="${dk}:${id}"><button class="pe-img" data-prev="${id}" aria-label="Preview ${escapeHtml(e.n)}"><img src="${IMG}${e.img}/0.jpg" loading="lazy" alt=""><span class="pe-zoom">⤢</span></button><div class="pe-info"><div class="pe-n">${star?'★ ':''}${escapeHtml(e.n)}</div><div class="pe-sub">${escapeHtml(e.gear)} · ${escapeHtml(e.m.slice(0,2).join(', '))}</div></div><div class="pe-check">✓</div></div>`;});
     html+='</div>';
   });
   box.innerHTML=html;
 }
 document.getElementById('planPick').addEventListener('click',e=>{
+  const prev=e.target.closest('[data-prev]');
+  if(prev){showImg(LIB[prev.dataset.prev]);return;}
   const row=e.target.closest('[data-pick]');if(!row||!planDraft)return;
   const parts=row.dataset.pick.split(':'),dk=parts[0],id=parts[1],i=planDraft[dk].indexOf(id);
   if(i>-1)planDraft[dk].splice(i,1);else planDraft[dk].push(id);
@@ -879,7 +911,7 @@ document.getElementById('planBuild').addEventListener('click',async()=>{
   profile.planGoal=goal;profile.planDays=days;profile.planEquip=equip;saveProfile();
   const latest=bw.length?[...bw].sort((a,b)=>a.d<b.d?1:-1)[0].kg:null;
   const profileStr=`Goal: ${goal}. Days/week: ${days}. Equipment: ${equip==='gym'?'full gym':'hotel (no barbell)'}. Height: ${(profile.hFt||'?')}'${profile.hIn||'0'}". Weight: ${latest?latest+'kg':'unknown'}.`;
-  const catalog=Object.keys(LIB).filter(id=>equipAllowed(LIB[id].gear,equip)).map(id=>({id,name:LIB[id].n,day:LIB[id].day,equipment:LIB[id].gear,muscles:LIB[id].m}));
+  const catalog=Object.keys(LIB).filter(id=>exAllowed(id,equip)).map(id=>({id,name:LIB[id].n,day:LIB[id].day,equipment:LIB[id].gear,muscles:LIB[id].m}));
   btn.disabled=true;const orig=btn.textContent;btn.textContent='Building…';setPlanStatus('Asking the AI to pick your exercises…');
   try{
     const resp=await fetch(EXTRACT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({kind:'plan',profile:profileStr,catalog})});
@@ -896,14 +928,17 @@ document.getElementById('planBuild').addEventListener('click',async()=>{
 });
 document.getElementById('planSave').addEventListener('click',()=>{
   if(!planDraft)return;
+  const msg=document.getElementById('planActionMsg');
   const total=planDraft.push.length+planDraft.pull.length+planDraft.legs.length;
-  if(!total){setPlanStatus('Pick at least one exercise first, or Clear plan to use the default.','err');return;}
+  if(!total){msg.style.display='block';msg.className='status err';msg.textContent='Pick at least one exercise first, or Clear plan to use the default.';return;}
   plan={push:[...planDraft.push],pull:[...planDraft.pull],legs:[...planDraft.legs]};savePlan();
-  setPlanStatus('Saved ✓ — your plan now shows in the Train tab.','ok');
+  msg.style.display='block';msg.className='status ok';
+  msg.textContent=`Saved ✓ — Train now shows your ${total} exercises (${plan.push.length} push · ${plan.pull.length} pull · ${plan.legs.length} legs), replacing the default program.`;
+  const btn=document.getElementById('planSave'),orig=btn.textContent;btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent=orig;},1600);
   if(!(active&&active.startedAt))render(currentTab());
 });
 document.getElementById('planClear').addEventListener('click',()=>{
-  confirmDelete('Clear your plan?','Train will go back to the default Push/Pull/Legs.').then(ok=>{if(!ok)return;plan=null;savePlan();planDraft=null;planStars={push:[],pull:[],legs:[]};document.getElementById('planPick').innerHTML='';document.getElementById('planActions').style.display='none';setPlanStatus('Cleared — Train uses the default program.','');if(!(active&&active.startedAt))render(currentTab());});
+  confirmDelete('Clear your plan?','Train will go back to the default Push/Pull/Legs.').then(ok=>{if(!ok)return;plan=null;savePlan();planDraft=null;planStars={push:[],pull:[],legs:[]};document.getElementById('planPick').innerHTML='';document.getElementById('planActions').style.display='none';const msg=document.getElementById('planActionMsg');msg.style.display='none';setPlanStatus('Cleared — Train uses the default program.','');if(!(active&&active.startedAt))render(currentTab());});
 });
 function spark(){if(bw.length<2)return'';const W=320,H=90,pad=10,xs=bw.map(p=>new Date(p.d).getTime()),ys=bw.map(p=>p.kg),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),sx=t=>x1===x0?W/2:pad+(t-x0)/(x1-x0)*(W-2*pad),sy=v=>y1===y0?H/2:H-pad-(v-y0)/(y1-y0)*(H-2*pad);const line=bw.map(p=>`${sx(new Date(p.d).getTime()).toFixed(1)},${sy(p.kg).toFixed(1)}`).join(" "),dots=bw.map(p=>`<circle cx="${sx(new Date(p.d).getTime()).toFixed(1)}" cy="${sy(p.kg).toFixed(1)}" r="2.6" fill="#FFB627"/>`).join("");return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${line}" fill="none" stroke="#FFB627" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;}
 
@@ -1248,6 +1283,32 @@ function openBody(key){
 function closeBody(){document.getElementById('bodyModal').classList.remove('open');}
 document.getElementById('bmClose').addEventListener('click',closeBody);
 document.getElementById('bodyModal').addEventListener('click',e=>{if(e.target.id==='bodyModal')closeBody();});
+
+/* ---------- image lightbox (large animated demo) ---------- */
+let imgTick=null,imgPaused=false;
+function showImg(e){
+  if(!e)return;
+  document.getElementById('imName').textContent=e.n;
+  const big=document.getElementById('imBig');
+  document.getElementById('imF0').src=IMG+e.img+'/0.jpg';
+  document.getElementById('imF1').src=IMG+e.img+'/1.jpg';
+  document.getElementById('imMeta').innerHTML=e.m.map((m,j)=>`<span class="chip ${j===0?'primary':''}">${escapeHtml(m)}</span>`).join('')+`<span class="chip">${escapeHtml(e.gear)}</span><span class="chip">${e.sets}×${e.reps}</span>`;
+  big.classList.remove('alt','paused');document.getElementById('imPhase').textContent='Start';imgPaused=false;
+  document.getElementById('imgModal').classList.add('open');
+  clearInterval(imgTick);
+  if(!window.matchMedia('(prefers-reduced-motion: reduce)').matches){
+    imgTick=setInterval(()=>{if(imgPaused)return;const a=!big.classList.contains('alt');big.classList.toggle('alt',a);document.getElementById('imPhase').textContent=a?'Finish':'Start';},1100);
+  }
+}
+function openImg(key){
+  const day=key.replace(/[0-9]+$/,''),idx=parseInt(key.match(/[0-9]+$/)[0],10);
+  const prog=dayProgram(day),e=prog&&prog.ex[idx];showImg(e);
+}
+function closeImg(){clearInterval(imgTick);imgTick=null;document.getElementById('imgModal').classList.remove('open');}
+document.getElementById('imBig').addEventListener('click',()=>{imgPaused=!imgPaused;document.getElementById('imBig').classList.toggle('paused',imgPaused);});
+document.getElementById('imClose').addEventListener('click',closeImg);
+document.getElementById('imgModal').addEventListener('click',e=>{if(e.target.id==='imgModal')closeImg();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeImg();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape')closeBody();});
 
 /* ---------- rest timer (timestamp-based, survives app switches) ---------- */
