@@ -1,4 +1,4 @@
-# Kist - Gym Workout
+# Kist Workout
 
 A mobile-first Push / Pull / Legs workout tracker built as a single-file progressive web app. It logs your training, sleep, and bodyweight, syncs across devices through Supabase, and uses Google Gemini to read screenshots and give honest, range-based coaching insights. It also includes an AI-assisted plan builder that picks exercises for you from a curated, image-verified library.
 

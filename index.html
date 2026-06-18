@@ -414,9 +414,11 @@ create policy "anon access" on ppl_kv
       <p class="tiny" style="margin-top:0">Set your goal and gear, and let the AI star the best exercises for you from the library. Keep its picks or add your own — your plan then shows in the Train tab. No plan? Train uses the default Push/Pull/Legs.</p>
       <div class="field"><span class="cap">Goal</span><select id="planGoal"><option value="lean bulk">Lean bulk (gain muscle, stay lean)</option><option value="lose fat">Lose fat / get lean</option><option value="build strength">Build strength</option><option value="general fitness">General fitness</option></select></div>
       <div class="field"><span class="cap">Days per week</span><select id="planDays"><option>3</option><option>4</option><option>5</option><option>6</option></select></div>
+      <div class="tiny" id="planDaysHint" style="margin:-2px 0 4px"></div>
       <div class="field"><span class="cap">Equipment</span><select id="planEquip"><option value="hotel">Hotel gym (dumbbells, bodyweight, pulldown/row)</option><option value="mid">Mid gym (+ barbell &amp; cables)</option><option value="full">Full gym (+ leg-machine room)</option></select></div>
       <button class="btn-primary" id="planBuild">✨ Build my plan with AI</button>
       <div class="status" id="planStatus" style="display:none"></div>
+      <button class="reset" id="planToggle" style="display:none;margin-top:10px">✏️ Edit exercises</button>
       <div id="planPick"></div>
       <div id="planActions" style="display:none">
         <button class="btn-primary" id="planSave" style="margin-top:12px">Save plan → show in Train</button>
@@ -871,11 +873,30 @@ function renderBMI(){
 let planDraft=null;
 let planStars={push:[],pull:[],legs:[]};
 function setPlanStatus(msg,kind){const el=document.getElementById('planStatus');el.style.display='block';el.className='status'+(kind?' '+kind:'');el.textContent=msg;}
+function planCount(){return planDraft?(planDraft.push.length+planDraft.pull.length+planDraft.legs.length):0;}
+function setPickerCollapsed(c){
+  const pick=document.getElementById('planPick'),tog=document.getElementById('planToggle'),save=document.getElementById('planSave');
+  pick.style.display=c?'none':'';
+  tog.style.display=planDraft?'block':'none';
+  tog.textContent=c?`✏️ Edit exercises (${planCount()} selected)`:'▾ Hide exercise list';
+  if(save)save.style.display=c?'none':'';
+}
+document.getElementById('planToggle').addEventListener('click',()=>{
+  const collapsed=document.getElementById('planPick').style.display==='none';
+  setPickerCollapsed(!collapsed);
+});
+function daysHint(d){d=parseInt(d,10);
+  if(d<=3)return 'One full Pull → Push → Legs cycle a week, with rest days between (e.g. Pull, rest, Push, rest, Legs).';
+  if(d===4)return 'Rolling Pull → Push → Legs (~4 sessions), so the cycle just continues into the next day.';
+  if(d===5)return 'Rolling Pull → Push → Legs, ~5 sessions — most days train, a couple are rest.';
+  return 'Each day comes round about twice a week — strong frequency, so watch sleep and recovery.';}
+function updateDaysHint(){const el=document.getElementById('planDaysHint');if(el)el.textContent=daysHint(document.getElementById('planDays').value);}
 function loadPlanFields(){
   if(profile.planGoal)document.getElementById('planGoal').value=profile.planGoal;
   if(profile.planDays)document.getElementById('planDays').value=profile.planDays;
   if(profile.planEquip)document.getElementById('planEquip').value=profile.planEquip;
-  if(plan&&!planDraft){planDraft={push:[...(plan.push||[])],pull:[...(plan.pull||[])],legs:[...(plan.legs||[])]};renderPlanPicker();document.getElementById('planActions').style.display='block';}
+  updateDaysHint();
+  if(plan&&!planDraft){planDraft={push:[...(plan.push||[])],pull:[...(plan.pull||[])],legs:[...(plan.legs||[])]};renderPlanPicker();document.getElementById('planActions').style.display='block';setPickerCollapsed(true);}
 }
 function equipTier(equip){return equip==='full'?3:(equip==='mid'?2:1);}
 function equipAllowed(gear,equip){return true;} // legacy, unused
@@ -903,7 +924,7 @@ document.getElementById('planPick').addEventListener('click',e=>{
   row.classList.toggle('on',planDraft[dk].indexOf(id)>-1);
 });
 ['planGoal','planDays','planEquip'].forEach(id=>document.getElementById(id).addEventListener('change',()=>{
-  profile.planGoal=document.getElementById('planGoal').value;profile.planDays=document.getElementById('planDays').value;profile.planEquip=document.getElementById('planEquip').value;saveProfile();
+  profile.planGoal=document.getElementById('planGoal').value;profile.planDays=document.getElementById('planDays').value;profile.planEquip=document.getElementById('planEquip').value;saveProfile();updateDaysHint();
   if(planDraft)renderPlanPicker();
 }));
 document.getElementById('planBuild').addEventListener('click',async()=>{
@@ -921,7 +942,7 @@ document.getElementById('planBuild').addEventListener('click',async()=>{
     if(!resp.ok||!j.ok||!j.plan){setPlanStatus(j.error||'Could not build a plan.','err');btn.disabled=false;btn.textContent=orig;return;}
     planStars={push:[...(j.plan.push||[])],pull:[...(j.plan.pull||[])],legs:[...(j.plan.legs||[])]};
     planDraft={push:[...planStars.push],pull:[...planStars.pull],legs:[...planStars.legs]};
-    renderPlanPicker();document.getElementById('planActions').style.display='block';
+    renderPlanPicker();document.getElementById('planActions').style.display='block';setPickerCollapsed(false);
     setPlanStatus("Here are the AI's picks (★). Tap any to add or remove, then Save.",'ok');
   }catch(e){setPlanStatus('Could not reach the server — check your connection.','err');}
   btn.disabled=false;btn.textContent=orig;
@@ -929,16 +950,19 @@ document.getElementById('planBuild').addEventListener('click',async()=>{
 document.getElementById('planSave').addEventListener('click',()=>{
   if(!planDraft)return;
   const msg=document.getElementById('planActionMsg');
+  if(active&&active.startedAt){msg.style.display='block';msg.className='status err';msg.textContent='Finish or end your current session before changing your plan.';return;}
   const total=planDraft.push.length+planDraft.pull.length+planDraft.legs.length;
   if(!total){msg.style.display='block';msg.className='status err';msg.textContent='Pick at least one exercise first, or Clear plan to use the default.';return;}
   plan={push:[...planDraft.push],pull:[...planDraft.pull],legs:[...planDraft.legs]};savePlan();
   msg.style.display='block';msg.className='status ok';
   msg.textContent=`Saved ✓ — Train now shows your ${total} exercises (${plan.push.length} push · ${plan.pull.length} pull · ${plan.legs.length} legs), replacing the default program.`;
   const btn=document.getElementById('planSave'),orig=btn.textContent;btn.textContent='Saved ✓';setTimeout(()=>{btn.textContent=orig;},1600);
+  setPickerCollapsed(true);
   if(!(active&&active.startedAt))render(currentTab());
 });
 document.getElementById('planClear').addEventListener('click',()=>{
-  confirmDelete('Clear your plan?','Train will go back to the default Push/Pull/Legs.').then(ok=>{if(!ok)return;plan=null;savePlan();planDraft=null;planStars={push:[],pull:[],legs:[]};document.getElementById('planPick').innerHTML='';document.getElementById('planActions').style.display='none';const msg=document.getElementById('planActionMsg');msg.style.display='none';setPlanStatus('Cleared — Train uses the default program.','');if(!(active&&active.startedAt))render(currentTab());});
+  if(active&&active.startedAt){const msg=document.getElementById('planActionMsg');msg.style.display='block';msg.className='status err';msg.textContent='Finish or end your current session before changing your plan.';return;}
+  confirmDelete('Clear your plan?','Train will go back to the default Push/Pull/Legs.').then(ok=>{if(!ok)return;plan=null;savePlan();planDraft=null;planStars={push:[],pull:[],legs:[]};document.getElementById('planPick').innerHTML='';document.getElementById('planPick').style.display='';document.getElementById('planToggle').style.display='none';document.getElementById('planActions').style.display='none';const msg=document.getElementById('planActionMsg');msg.style.display='none';setPlanStatus('Cleared — Train uses the default program.','');if(!(active&&active.startedAt))render(currentTab());});
 });
 function spark(){if(bw.length<2)return'';const W=320,H=90,pad=10,xs=bw.map(p=>new Date(p.d).getTime()),ys=bw.map(p=>p.kg),x0=Math.min(...xs),x1=Math.max(...xs),y0=Math.min(...ys),y1=Math.max(...ys),sx=t=>x1===x0?W/2:pad+(t-x0)/(x1-x0)*(W-2*pad),sy=v=>y1===y0?H/2:H-pad-(v-y0)/(y1-y0)*(H-2*pad);const line=bw.map(p=>`${sx(new Date(p.d).getTime()).toFixed(1)},${sy(p.kg).toFixed(1)}`).join(" "),dots=bw.map(p=>`<circle cx="${sx(new Date(p.d).getTime()).toFixed(1)}" cy="${sy(p.kg).toFixed(1)}" r="2.6" fill="#FFB627"/>`).join("");return `<svg class="spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none"><polyline points="${line}" fill="none" stroke="#FFB627" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>${dots}</svg>`;}
 
